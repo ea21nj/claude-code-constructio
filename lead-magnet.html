@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Leakage Audit - Find Hidden Costs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 40px;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #0f0f0f;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #0f0f0f;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        .question-group {
+            margin-bottom: 32px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .question-label {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+            display: block;
+        }
+
+        .question-text {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus,
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.1);
+        }
+
+        .slider-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .slider-value span {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            cursor: pointer;
+            border: none;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox-item:hover {
+            border-color: #1a1a1a;
+            background: #f9f9f9;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #1a1a1a;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #1a1a1a;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        .button {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 20px;
+        }
+
+        .button-primary {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .button-secondary {
+            background: transparent;
+            color: #1a1a1a;
+            border: 1px solid #ddd;
+        }
+
+        .button-secondary:hover {
+            border-color: #1a1a1a;
+            background: #f9f9f9;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results-screen {
+            display: none;
+        }
+
+        .results-header {
+            margin-bottom: 32px;
+        }
+
+        .results-header .subtitle {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .impact-card {
+            background: #f9f9f9;
+            border-left: 4px solid #1a1a1a;
+            padding: 20px;
+            margin-bottom: 16px;
+            border-radius: 6px;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .impact-card.high {
+            border-left-color: #d32f2f;
+            background: #ffebee;
+        }
+
+        .impact-card.medium {
+            border-left-color: #f57c00;
+            background: #fff3e0;
+        }
+
+        .impact-card.low {
+            border-left-color: #fbc02d;
+            background: #fffde7;
+        }
+
+        .impact-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        .impact-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #1a1a1a;
+        }
+
+        .impact-value.currency {
+            color: #d32f2f;
+        }
+
+        .impact-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .summary-box {
+            background: #f0f0f0;
+            padding: 24px;
+            border-radius: 8px;
+            margin: 28px 0;
+            text-align: center;
+        }
+
+        .summary-number {
+            font-size: 40px;
+            font-weight: 700;
+            color: #d32f2f;
+            margin-bottom: 8px;
+        }
+
+        .summary-text {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .cta-section {
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .cta-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #0f0f0f;
+        }
+
+        .cta-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        input[type="email"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .intro-screen {
+            text-align: center;
+        }
+
+        .intro-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .intro-benefits {
+            list-style: none;
+            margin: 24px 0;
+            text-align: left;
+        }
+
+        .intro-benefits li {
+            padding: 12px 0;
+            padding-left: 32px;
+            position: relative;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .intro-benefits li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            .card {
+                padding: 28px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .impact-value {
+                font-size: 24px;
+            }
+
+            .summary-number {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <!-- Intro Screen -->
+            <div class="intro-screen" id="introScreen">
+                <div class="intro-icon">⚠️</div>
+                <h1>Where Is Your Project Delivery Bleeding Out?</h1>
+                <p class="subtitle">Most construction teams lose 15–40% of their capacity to workflow inefficiencies. Find out where yours are leaking.</p>
+
+                <ul class="intro-benefits">
+                    <li>Quantify the real cost of delays and rework</li>
+                    <li>Identify your biggest bottlenecks by impact</li>
+                    <li>See exactly what's dragging your timeline</li>
+                </ul>
+
+                <button class="button button-primary" onclick="startQuiz()">Start the Audit (2 min)</button>
+                <p class="subtitle" style="margin-top: 24px; font-size: 12px;">No email required to get started</p>
+            </div>
+
+            <!-- Quiz Screen -->
+            <div id="quizScreen" class="hidden">
+                <div class="progress-text" id="progressText">1 of 6</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 16%;"></div>
+                </div>
+
+                <div id="questionsContainer"></div>
+
+                <button class="button button-secondary" id="backBtn" onclick="previousQuestion()">Back</button>
+                <button class="button button-primary" id="nextBtn" onclick="nextQuestion()">Next</button>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="resultsScreen" class="results-screen">
+                <div class="results-header">
+                    <h2>Your Workflow Leakage Report</h2>
+                    <p class="subtitle">Based on your answers, here's where your organization is bleeding out capacity and money.</p>
+                </div>
+
+                <div class="summary-box">
+                    <div class="summary-number" id="totalCostDisplay">$0</div>
+                    <div class="summary-text">Estimated annual cost of workflow inefficiencies</div>
+                </div>
+
+                <div id="impactResults"></div>
+
+                <div class="cta-section">
+                    <h3 class="cta-title">Ready to plug these leaks?</h3>
+                    <p class="cta-text">Learn how outcome-driven work management connects execution to measurable business results.</p>
+                    <input type="email" id="emailInput" placeholder="your@email.com" />
+                    <button class="button button-primary" onclick="submitEmail()">Get the Full Strategy</button>
+                    <button class="button button-secondary" onclick="resetQuiz()">Take Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                type: "slider",
+                title: "How many days of project delays",
+                subtitle: "...do you estimate are caused by approval and sign-off bottlenecks per project cycle?",
+                key: "approvalDelay",
+                min: 0,
+                max: 30,
+                default: 5,
+                suffix: "days"
+            },
+            {
+                type: "slider",
+                title: "Percentage of work that needs rework",
+                subtitle: "...due to communication gaps, unclear requirements, or scope changes?",
+                key: "reworkPercent",
+                min: 0,
+                max: 50,
+                default: 15,
+                suffix: "%"
+            },
+            {
+                type: "slider",
+                title: "Hours per week your team spends",
+                subtitle: "...on firefighting, context-switching, or chasing information instead of productive work?",
+                key: "frictionHours",
+                min: 0,
+                max: 40,
+                default: 10,
+                suffix: "hours"
+            },
+            {
+                type: "number",
+                title: "Average daily project burn rate",
+                subtitle: "...what does it cost you per day to keep a project running? (salary, equipment, overhead, etc.)",
+                key: "dailyBurnRate",
+                placeholder: "e.g., $5,000",
+                prefix: "$"
+            },
+            {
+                type: "slider",
+                title: "How many active projects",
+                subtitle: "...does your team manage simultaneously?",
+                key: "projectCount",
+                min: 1,
+                max: 50,
+                default: 12,
+                suffix: "projects"
+            },
+            {
+                type: "select",
+                title: "What's your biggest workflow bottleneck?",
+                subtitle: "...pick the one that causes the most delays or rework",
+                key: "bottleneck",
+                options: [
+                    { value: "approval", label: "Approval & sign-off delays" },
+                    { value: "communication", label: "Communication & coordination gaps" },
+                    { value: "handoff", label: "Handoff inefficiencies between teams" },
+                    { value: "resource", label: "Resource conflicts & scheduling" },
+                    { value: "rework", label: "Rework due to unclear requirements" },
+                    { value: "change", label: "Change management & scope creep" }
+                ]
+            }
+        ];
+
+        let currentQuestion = 0;
+        let answers = {};
+        let totalCost = 0;
+
+        function startQuiz() {
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('quizScreen').classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const question = questions[currentQuestion];
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-group';
+
+            const title = document.createElement('h2');
+            title.textContent = question.title;
+            questionDiv.appendChild(title);
+
+            const subtitle = document.createElement('span');
+            subtitle.className = 'question-text';
+            subtitle.textContent = question.subtitle;
+            questionDiv.appendChild(subtitle);
+
+            if (question.type === 'slider') {
+                const sliderDiv = document.createElement('div');
+                sliderDiv.style.marginTop = '16px';
+
+                const sliderValue = document.createElement('div');
+                sliderValue.className = 'slider-value';
+                const valueSpan = document.createElement('span');
+                valueSpan.id = 'sliderValue';
+                valueSpan.textContent = (answers[question.key] || question.default) + ' ' + question.suffix;
+                sliderValue.appendChild(valueSpan);
+                sliderDiv.appendChild(sliderValue);
+
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.min = question.min;
+                slider.max = question.max;
+                slider.value = answers[question.key] || question.default;
+                slider.onchange = (e) => {
+                    answers[question.key] = parseInt(e.target.value);
+                    document.getElementById('sliderValue').textContent = e.target.value + ' ' + question.suffix;
+                };
+                slider.oninput = (e) => {
+                    document.getElementById('sliderValue').textContent = e.target.value + ' ' + question.suffix;
+                };
+                sliderDiv.appendChild(slider);
+                questionDiv.appendChild(sliderDiv);
+            } else if (question.type === 'number') {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.placeholder = question.placeholder;
+                input.value = answers[question.key] || '';
+                input.onchange = (e) => {
+                    answers[question.key] = parseInt(e.target.value) || 0;
+                };
+                questionDiv.appendChild(input);
+            } else if (question.type === 'select') {
+                const select = document.createElement('select');
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Choose one...';
+                select.appendChild(defaultOption);
+
+                question.options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.textContent = opt.label;
+                    select.appendChild(option);
+                });
+
+                select.value = answers[question.key] || '';
+                select.onchange = (e) => {
+                    answers[question.key] = e.target.value;
+                };
+                questionDiv.appendChild(select);
+            }
+
+            container.appendChild(questionDiv);
+
+            // Update progress
+            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent = `${currentQuestion + 1} of ${questions.length}`;
+
+            // Update buttons
+            document.getElementById('backBtn').style.display = currentQuestion > 0 ? 'block' : 'none';
+            document.getElementById('nextBtn').textContent = currentQuestion === questions.length - 1 ? 'See Results' : 'Next';
+        }
+
+        function nextQuestion() {
+            const question = questions[currentQuestion];
+
+            // Validate
+            if (answers[question.key] === undefined || answers[question.key] === '') {
+                alert('Please answer this question to continue');
+                return;
+            }
+
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                renderQuestion();
+            } else {
+                calculateResults();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                renderQuestion();
+            }
+        }
+
+        function calculateResults() {
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('resultsScreen').classList.remove('hidden');
+
+            const dailyRate = answers.dailyBurnRate || 5000;
+            const approvalDayCost = answers.approvalDelay * dailyRate * answers.projectCount;
+            const reworkCost = (answers.reworkPercent / 100) * dailyRate * 250 * answers.projectCount; // Assume 250 working days
+            const frictionCost = answers.frictionHours * (dailyRate / 8) * 52 * answers.projectCount;
+
+            totalCost = Math.round(approvalDayCost + reworkCost + frictionCost);
+
+            document.getElementById('totalCostDisplay').textContent = '$' + totalCost.toLocaleString();
+
+            const impacts = [
+                {
+                    label: 'Approval & Sign-off Delays',
+                    value: '$' + Math.round(approvalDayCost).toLocaleString(),
+                    description: `${answers.approvalDelay} days lost per project × ${answers.projectCount} projects = ~$${Math.round(approvalDayCost/1000)}K annual`,
+                    severity: approvalDayCost > totalCost * 0.4 ? 'high' : 'medium'
+                },
+                {
+                    label: 'Rework & Rework Cycles',
+                    value: '$' + Math.round(reworkCost).toLocaleString(),
+                    description: `${answers.reworkPercent}% of work rework = ~$${Math.round(reworkCost/1000)}K annual cost`,
+                    severity: reworkCost > totalCost * 0.4 ? 'high' : 'medium'
+                },
+                {
+                    label: 'Friction & Wasted Capacity',
+                    value: '$' + Math.round(frictionCost).toLocaleString(),
+                    description: `${answers.frictionHours} hrs/week × ${answers.projectCount} projects = ~$${Math.round(frictionCost/1000)}K annual`,
+                    severity: frictionCost > totalCost * 0.4 ? 'high' : 'medium'
+                }
+            ];
+
+            impacts.sort((a, b) => {
+                const aVal = parseInt(a.value.replace(/[$,]/g, ''));
+                const bVal = parseInt(b.value.replace(/[$,]/g, ''));
+                return bVal - aVal;
+            });
+
+            const resultsDiv = document.getElementById('impactResults');
+            resultsDiv.innerHTML = '';
+            impacts.forEach(impact => {
+                const card = document.createElement('div');
+                card.className = `impact-card ${impact.severity}`;
+                card.innerHTML = `
+                    <div class="impact-label">${impact.label}</div>
+                    <div class="impact-value currency">${impact.value}</div>
+                    <div class="impact-description">${impact.description}</div>
+                `;
+                resultsDiv.appendChild(card);
+            });
+        }
+
+        function submitEmail() {
+            const email = document.getElementById('emailInput').value;
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email');
+                return;
+            }
+            // In a real implementation, this would send to your backend
+            alert(`Thanks! We'll send the full strategy to ${email}`);
+            resetQuiz();
+        }
+
+        function resetQuiz() {
+            currentQuestion = 0;
+            answers = {};
+            totalCost = 0;
+            document.getElementById('introScreen').classList.remove('hidden');
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('resultsScreen').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

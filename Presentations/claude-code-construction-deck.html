@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code for Construction - Operations Edition</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg:#0B0D11; --surface:#131620; --surface2:#1C1F2B; --border:#252933;
+  --accent:#C96442; --accent-glow:rgba(201,100,66,0.12);
+  --text:#F2EEE9; --text-muted:#7A7E8C; --text-subtle:#3A3D4A;
+  --font:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+}
+html,body{width:100%;height:100%;background:var(--bg);font-family:var(--font);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased;}
+#deck{width:100vw;height:100vh;position:relative;overflow:hidden;}
+.slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:6vh 8vw;opacity:0;transform:translateY(20px);transition:opacity .38s cubic-bezier(.4,0,.2,1),transform .38s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:1;}
+.slide.active{opacity:1;transform:translateY(0);pointer-events:all;z-index:2;}
+.slide.out{opacity:0;transform:translateY(-20px);}
+#counter{position:fixed;top:28px;right:72px;font-size:12px;font-weight:500;letter-spacing:.06em;color:var(--text-subtle);z-index:100;}
+#counter b{color:var(--text-muted);font-weight:600;}
+#nav-dots{position:fixed;right:26px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:100;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text-subtle);cursor:pointer;transition:background .2s,transform .2s;}
+.dot:hover{background:var(--text-muted);}
+.dot.on{background:var(--accent);transform:scale(1.35);}
+#hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text-subtle);letter-spacing:.07em;z-index:100;user-select:none;}
+.glow{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;}
+.glow-a{width:700px;height:700px;background:rgba(201,100,66,.035);top:-250px;right:-200px;}
+.glow-b{width:500px;height:500px;background:rgba(201,100,66,.025);bottom:-200px;left:-150px;}
+.eyebrow{font-size:clamp(9px,1vw,12px);font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:20px;}
+.hl{color:var(--accent);font-style:normal;}
+.l-statement{display:flex;flex-direction:column;align-items:center;text-align:center;max-width:860px;}
+.l-statement .big{font-size:clamp(52px,8.5vw,108px);font-weight:800;line-height:1.0;letter-spacing:-3px;margin-bottom:28px;}
+.l-statement .sub{font-size:clamp(15px,1.7vw,22px);font-style:italic;color:var(--text-muted);line-height:1.6;margin-bottom:32px;max-width:600px;}
+.rule{width:44px;height:2px;background:var(--accent);margin:0 auto 28px;}
+.byline{font-size:clamp(10px,1vw,12px);font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--text-subtle);}
+.l-section{display:flex;flex-direction:column;align-items:flex-start;width:100%;max-width:1060px;}
+.l-section .big{font-size:clamp(36px,5.8vw,72px);font-weight:800;line-height:1.06;letter-spacing:-2px;margin-bottom:36px;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 26px;}
+.card.hi{border-color:var(--accent);box-shadow:inset 0 0 50px var(--accent-glow);}
+.c-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.c-title{font-size:clamp(14px,1.6vw,18px);font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.25;}
+.c-body{font-size:clamp(11px,1.2vw,14px);color:var(--text-muted);line-height:1.55;}
+.l-split{display:grid;grid-template-columns:1fr 1fr;gap:64px;max-width:1060px;width:100%;align-items:center;}
+.l-split .big{font-size:clamp(34px,5vw,62px);font-weight:800;line-height:1.06;letter-spacing:-1.5px;margin-bottom:18px;}
+.l-split .desc{font-size:clamp(13px,1.45vw,17px);color:var(--text-muted);line-height:1.65;margin-bottom:24px;}
+.feat-list{display:flex;flex-direction:column;gap:10px;}
+.feat{display:flex;align-items:flex-start;gap:14px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+.fdot{width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;}
+.ft{font-size:clamp(13px,1.4vw,16px);font-weight:600;color:var(--text);line-height:1.35;}
+.fs{font-size:clamp(10px,1.1vw,13px);color:var(--text-muted);margin-top:3px;line-height:1.4;}
+</style>
+</head>
+<body>
+<div id="deck">
+  <div class="glow glow-a"></div>
+  <div class="glow glow-b"></div>
+  <div id="counter"><b>01</b> / 7</div>
+  <div id="nav-dots"></div>
+  <div id="hint">left/right arrows to navigate, F for fullscreen</div>
+
+  <!-- SLIDE 1: Title -->
+  <div class="slide active">
+    <div class="l-statement">
+      <div class="eyebrow">For Construction Ops</div>
+      <h1 class="big">Turn Workflows Into<br><em class="hl">Custom Tools</em></h1>
+      <p class="sub">The technical barrier just collapsed. Build the systems your teams actually need.</p>
+      <div class="rule"></div>
+      <div class="byline">Erik Andersson, Eligeo</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: The Problem -->
+  <div class="slide">
+    <div class="l-statement">
+      <div class="eyebrow">The Reality</div>
+      <h1 class="big">Workflows Are<br><em class="hl">Broken</em></h1>
+      <p class="sub">Work is scattered. Information gets lost. Teams operate in silos. Decisions happen too late.</p>
+      <div class="rule"></div>
+      <div style="margin-top:28px;font-size:clamp(13px,1.5vw,17px);color:var(--text-muted);font-style:italic;">But the problem isn't the software.<br>It's the workflow around the work.</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: The Opportunity -->
+  <div class="slide">
+    <div class="l-section">
+      <div class="eyebrow">What Changed</div>
+      <h2 class="big">You Can Build <em class="hl">Solutions</em> Now</h2>
+      <div class="grid">
+        <div class="card hi">
+          <div class="c-label">No Code Required</div>
+          <div class="c-title">You Control Execution</div>
+          <div class="c-body">Stop waiting for developers. Build trackers, dashboards, and tools that work the way your team actually operates.</div>
+        </div>
+        <div class="card">
+          <div class="c-label">Real Problems</div>
+          <div class="c-title">Solve What Matters</div>
+          <div class="c-body">Submittal tracking. Punch lists. Procurement. Field issues. Start with one pain point that's costing you time.</div>
+        </div>
+        <div class="card">
+          <div class="c-label">Speed</div>
+          <div class="c-title">Go Live Fast</div>
+          <div class="c-body">Design today. Build tomorrow. Get it in front of your teams this week. Iterate as you learn.</div>
+        </div>
+        <div class="card">
+          <div class="c-label">Structure</div>
+          <div class="c-title">Protect Margin</div>
+          <div class="c-body">Clear ownership. Standardized workflows. Visibility across teams. Less money left on the table.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: 4 Workflows + 12 Prompts -->
+  <div class="slide">
+    <div class="l-section">
+      <div class="eyebrow">The Framework</div>
+      <h2 class="big">4 Workflows, <em class="hl">12 Prompts</em></h2>
+      <div class="grid">
+        <div class="card">
+          <div class="c-label">Workflow 1</div>
+          <div class="c-title">Discovery & Problem Framing</div>
+          <div class="c-body">Map where work gets stuck. Find the real bottleneck. Know what to fix before you build.</div>
+        </div>
+        <div class="card hi">
+          <div class="c-label">Workflow 2</div>
+          <div class="c-title">Tool Builder</div>
+          <div class="c-body">Turn workflows into trackers. Procurement tools. Punch lists. Anything your team tracks manually now.</div>
+        </div>
+        <div class="card">
+          <div class="c-label">Workflow 3</div>
+          <div class="c-title">Dashboard & Portals</div>
+          <div class="c-body">Build what your PMs, supers, and office teams actually need to see. Executive visibility. Field updates.</div>
+        </div>
+        <div class="card">
+          <div class="c-label">Workflow 4</div>
+          <div class="c-title">Training & Rollout</div>
+          <div class="c-body">Make sure people use what you built. Adoption is the hard part. We make it systematic.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: What This Looks Like -->
+  <div class="slide">
+    <div class="l-split">
+      <div>
+        <div class="eyebrow">Real Example</div>
+        <h2 class="big">From Broken to <em class="hl">Controlled</em></h2>
+        <p class="desc">Your RFI process is scattered. Emails. Texts. Slack threads. PMs chasing responses. Nothing's tracked.</p>
+      </div>
+      <div class="feat-list">
+        <div class="feat">
+          <div class="fdot"></div>
+          <div><div class="ft">Week 1</div><div class="fs">Map the workflow, identify the bottleneck</div></div>
+        </div>
+        <div class="feat">
+          <div class="fdot"></div>
+          <div><div class="ft">Week 2</div><div class="fs">Build an RFI tracker with visibility</div></div>
+        </div>
+        <div class="feat">
+          <div class="fdot"></div>
+          <div><div class="ft">Week 3</div><div class="fs">Dashboard for PM oversight, alerts for delays</div></div>
+        </div>
+        <div class="feat">
+          <div class="fdot"></div>
+          <div><div class="ft">Week 4</div><div class="fs">Team trained, tracking started, margin protected</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Start With One -->
+  <div class="slide">
+    <div class="l-statement">
+      <div class="eyebrow">The First Step</div>
+      <h1 class="big">Pick One <em class="hl">Workflow</em></h1>
+      <p class="sub">Don't rebuild the whole company. Start with one pain point. Prove it works. Then expand.</p>
+      <div class="rule"></div>
+      <div style="margin-top:28px;font-size:clamp(13px,1.5vw,17px);color:var(--text-muted);font-style:italic;">Submittal tracking. Punch lists. Procurement. Owner updates. Choose the one that costs you the most time.</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Closing -->
+  <div class="slide">
+    <div class="l-statement">
+      <div class="eyebrow">The Edge</div>
+      <h1 class="big">Your Judgment <em class="hl">Wins</em></h1>
+      <p class="sub">Anyone can prompt AI. You understand construction.<br>That's the advantage.</p>
+      <div class="rule"></div>
+      <div style="margin-top:32px;">
+        <div style="font-size:clamp(14px,1.6vw,18px);color:var(--text);margin-bottom:12px;font-weight:600;">Ready to build smarter systems?</div>
+        <div style="font-size:clamp(11px,1.2vw,14px);color:var(--text-muted);">Get the Claude Code for Construction playbook:<br><em style="color:var(--accent);">notion.so/Master-Claude-Code-Construction</em></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+(function(){
+  const slides=Array.from(document.querySelectorAll('.slide'));
+  const total=slides.length;
+  let cur=0;
+  const dotsEl=document.getElementById('nav-dots');
+  slides.forEach((_,i)=>{const d=document.createElement('div');d.className='dot'+(i===0?' on':'');d.addEventListener('click',()=>go(i));dotsEl.appendChild(d);});
+  function updateUI(){const n=String(cur+1).padStart(2,'0');document.getElementById('counter').innerHTML='<b>'+n+'</b> / '+total;dotsEl.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===cur));}
+  function go(n){if(n===cur)return;slides[cur].classList.add('out');slides[cur].classList.remove('active');setTimeout(()=>slides[n].classList.remove('out'),380);cur=Math.max(0,Math.min(total-1,n));slides[cur].classList.add('active');updateUI();}
+  function next(){if(cur<total-1)go(cur+1);}
+  function prev(){if(cur>0)go(cur-1);}
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')next();if(e.key==='ArrowLeft'||e.key==='ArrowUp')prev();if(e.key==='f'||e.key==='F')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();});
+  let tx=0;document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});document.addEventListener('touchend',e=>{const dx=tx-e.changedTouches[0].clientX;if(Math.abs(dx)>40)dx>0?next():prev();},{passive:true});
+  updateUI();
+})();
+</script>
+</body>
+</html>
